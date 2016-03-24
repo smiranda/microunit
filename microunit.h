@@ -1,8 +1,31 @@
 /**
 * @file microunit.h
 * @author Sebastiao Salvador de Miranda (ssm)
+* @brief Tiny library for cpp unit testing. Should work on any c++11 compiler.
+*
+* Simply include this header in your test implementation file (e.g., main.cpp)
+* and call microunit::UnitTester::Run() in the function main(). To register
+* a new unit test case, use the macro UNIT (See the example below). Inside the
+* test case body, you can use the following macros to control the result
+* of the test.
+*
+* @li PASS() : Pass the test and return.
+* @li FAIL() : Fail the test and return.
+* @li ASSERT_TRUE(condition) : If the condition does not hold, fail and return.
+* @li ASSERT_FALSE(condition) : If the condition holds, fail and return.
+*
+* @code{.cpp}
+*  UNIT(Test_Two_Plus_Two) {
+*    ASSERT_TRUE(2 + 2 == 4);
+*  };
+*  // ...
+*  int main(){
+*    return microunit::UnitTester::Run() ? 0 : -1;
+*  }
+* @endcode
+*
 * @copyright Copyright (c) 2016, Sebastiao Salvador de Miranda.
-*            All rights reserved.
+*            All rights reserved. See licence below.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -31,39 +54,151 @@
 * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
-*
-* @brief Tiny library for cpp unit testing. Should work on any c++11 compiler.
-*
-* Simply include this header in your test implementation file (e.g., main.cpp)
-* and call microunit::UnitTester::Run() in the function main(). To register
-* a new unit test case, use the macro UNIT (See the example below). Inside the
-* test case body, you can use the following macros to control the result
-* of the test.
-*
-* @li PASS() : Pass the test and return.
-* @li FAIL() : Fail the test and return.
-* @li ASSERT_TRUE(condition) : If the condition does not hold, fail and return.
-* @li ASSERT_FALSE(condition) : If the condition holds, fail and return.
-*
-* @code{.cpp}
-*  UNIT(Test_Two_Plus_Two) {
-*    ASSERT_TRUE(2 + 2 == 4);
-*  };
-*  // ...
-*  int main(){
-*    return microunit::UnitTester::Run() ? 0 : -1;
-*  }
-* @endcode
 */
 
 #ifndef _MICROUNIT_MICROUNIT_H_
 #define _MICROUNIT_MICROUNIT_H_
+#include <string.h>
 #include <map>
 #include <string>
 #include <vector>
 #include <iostream>
-#define MICROUNIT_SEPARATOR "----------------------------------------"\
+
+/**
+* @brief Helper macros to get current logging filename
+*/
+#if defined(_WIN32)
+#define __FILENAME__ (strrchr(__FILE__, '\\') ?                                \
+strrchr(__FILE__, '\\') + 1 : __FILE__)
+#else
+#define __FILENAME__ (strrchr(__FILE__, '/') ?                                 \
+strrchr(__FILE__, '/') + 1 : __FILE__)
+#endif
+#define MICROUNIT_SEPARATOR "----------------------------------------"         \
                             "----------------------------------------"
+#if defined(_WIN32)
+#include "windows.h"
+#endif
+
+namespace microunit {
+const static int COLORCODE_GREY{ 7 };
+const static int COLORCODE_GREEN{ 10 };
+const static int COLORCODE_RED{ 12 };
+const static int COLORCODE_YELLOW{ 14 };
+
+/**
+* @brief Helper class to convert from color codes to ansi escape codes
+*        Used to print color in non-win32 systems.
+*/
+std::string ColorCodeToANSI(const int color_code) {
+  switch (color_code) {
+  case COLORCODE_GREY: return "\033[22;37m";
+  case COLORCODE_GREEN: return "\033[01;31m";
+  case COLORCODE_RED: return "\033[01;32m";
+  case COLORCODE_YELLOW: return "\033[01;33m";
+  default: return "";
+  }
+}
+
+/**
+* @brief Helper function to change the current terminal color.
+* @param [in] color_code Input color code.
+*/
+void SetTerminalColor(int color_code) {
+#if defined(_WIN32)
+  HANDLE handler = GetStdHandle(STD_OUTPUT_HANDLE);
+  CONSOLE_SCREEN_BUFFER_INFO buffer_info;
+  GetConsoleScreenBufferInfo(handler, &buffer_info);
+  SetConsoleTextAttribute(handler, ((buffer_info.wAttributes & 0xFFF0) |
+                                    (WORD)color_code));
+#else
+  std::cout << ColorCodeToANSI(color_code);
+#endif
+}
+
+/**
+* @brief Helper class to be used as a iostream manipulator and change the
+*        terminal color.
+*/
+class Color {
+public:
+  Color(int code) : code_(code) {}
+  void Set() const {
+    SetTerminalColor(code_);
+  }
+  int code() const { return code_; }
+private:
+  int code_;
+};
+
+const static Color Grey{ COLORCODE_GREY };
+const static Color Green{ COLORCODE_GREEN };
+const static Color Red{ COLORCODE_RED };
+const static Color Yellow{ COLORCODE_YELLOW };
+
+/**
+* @brief Helper class to be used in a cout streaming statement. Resets to
+*        the default terminal color upon statement completion.
+*/
+class SaveColor {
+public:
+  ~SaveColor() {
+    SetTerminalColor(Grey.code());
+  };
+};
+
+/**
+* @brief Helper class to be used in a cout streaming statement. Puts a line
+*        break upon statement completion.
+*/
+class EndingLineBreak {
+public:
+  ~EndingLineBreak() {
+    std::cout << std::endl;
+  };
+};
+}
+
+/** @brief Operator to allow using SaveColor class with an ostream */
+inline std::ostream& operator<<(std::ostream& os,
+                                const microunit::SaveColor& obj) {
+  return os;
+}
+
+/** @brief Operator to allow using EndingLineBreak class with an ostream */
+inline std::ostream& operator<<(std::ostream& os,
+                                const microunit::EndingLineBreak& obj) {
+  return os;
+}
+
+/** @brief Operator to allow using Color class with an ostream */
+inline std::ostream& operator<<(std::ostream& os,
+                                const microunit::Color& color) {
+  color.Set();
+  return os;
+}
+
+/**
+* @brief Macro for writing to the terminal an INFO-level log
+*/
+#define TERMINAL_INFO std::cout << microunit::SaveColor{} <<                   \
+microunit::EndingLineBreak{} << microunit::Yellow << "[    ] "
+#define LOG_INFO TERMINAL_INFO << __FILENAME__ << ":" << __LINE__ << ": "
+
+/**
+* @brief Macro for writing to the terminal a BAD-level log
+*/
+#define TERMINAL_BAD std::cout << microunit::SaveColor{} <<                    \
+microunit::EndingLineBreak{} << microunit::Red << "[    ] "
+#define LOG_BAD TERMINAL_BAD << __FILENAME__ << ":" << __LINE__ << ": "
+
+/**
+* @brief Macro for writing to the terminal a GOOD-level log
+*/
+#define TERMINAL_GOOD std::cout << microunit::SaveColor{} <<                   \
+microunit::EndingLineBreak{} << microunit::Green << "[    ] "
+#define LOG_GOOD TERMINAL_GOOD << __FILENAME__ << ":" << __LINE__ << ": "
+
 namespace microunit {
 /**
 * @brief Result of a unit test.
@@ -83,10 +218,6 @@ typedef void(*UnitFunction)(UnitFunctionResult*);
 */
 class UnitTester {
 public:
-  ~UnitTester() {};
-  UnitTester(const UnitTester&) = delete;
-  UnitTester(UnitTester&&) = delete;
-
   /**
   * @brief Run all the registered unit test cases.
   * @returns True if all tests pass, false otherwise.
@@ -97,16 +228,18 @@ public:
     // Iterate all registered unit tests
     for (auto& unit : Instance().unitfunction_map_) {
       std::cout << MICROUNIT_SEPARATOR << std::endl;
-      std::cout << "[    ] Test case '" << unit.first << "'" << std::endl;
+      TERMINAL_GOOD << "Test case '" << unit.first << "'";
 
       // Run the unit test
       UnitFunctionResult result;
       unit.second(&result);
 
-      std::cout << (result.success ? "[    ] Success" :
-                    "[!!!!] Failure") << std::endl;
-      if (!result.success)
+      if (!result.success) {
+        TERMINAL_BAD << "Failed test";
         failures.push_back(unit.first);
+      } else {
+        TERMINAL_GOOD << "Passed test";
+      }
     }
     std::cout
       << MICROUNIT_SEPARATOR << std::endl
@@ -114,14 +247,14 @@ public:
 
     // Output result summary
     if (failures.empty()) {
-      std::cout << "[    ] All tests passed" << std::endl;
+      TERMINAL_GOOD << "All tests passed";
       std::cout << MICROUNIT_SEPARATOR << std::endl;
       return true;
     } else {
-      std::cout << "[!!!!] Failed " << failures.size()
-        << " test cases:" << std::endl;
+      TERMINAL_BAD << "Failed " << failures.size()
+        << " test cases:";
       for (const auto& failure : failures) {
-        std::cout << "> " << failure << std::endl;
+        TERMINAL_BAD << failure;
       }
       std::cout << MICROUNIT_SEPARATOR << std::endl;
       return false;
@@ -158,6 +291,10 @@ public:
     Registrator(Registrator&&) = delete;
     ~Registrator() {};
   };
+
+  ~UnitTester() {};
+  UnitTester(const UnitTester&) = delete;
+  UnitTester(UnitTester&&) = delete;
 
 private:
   UnitTester() {};
@@ -197,6 +334,7 @@ void FUNCTION(microunit::UnitFunctionResult *__microunit_testresult)
 * @brief Pass the test and return from the test case.
 */
 #define PASS() {                                                               \
+LOG_GOOD << "Test stopped: Pass";                                              \
 __microunit_testresult->success = true;                                        \
 return;                                                                        \
 }
@@ -205,7 +343,7 @@ return;                                                                        \
 * @brief Fail the test and return from the test case.
 */
 #define FAIL() {                                                               \
-std::cout << "[    ] Test failed " << std::endl;                               \
+LOG_BAD << "Test stopped: Fail";                                               \
 __microunit_testresult->success = false;                                       \
 return;                                                                        \
 }
@@ -215,7 +353,7 @@ return;                                                                        \
 *        fail the test and return.
 */
 #define ASSERT_TRUE(condition) if(!(condition)) {                              \
-std::cout << "[    ] Test Assert failed: " #condition << std::endl;            \
+LOG_BAD << "Assert-true failed: " #condition;                                  \
 FAIL();                                                                        \
 }
 
@@ -224,7 +362,7 @@ FAIL();                                                                        \
 *        test and return.
 */
 #define ASSERT_FALSE(condition) if((condition)) {                              \
-std::cout << "[    ] Test Assert failed: " #condition << std::endl;            \
+LOG_BAD << "Assert-false failed: " #condition << std::endl;                    \
 FAIL();                                                                        \
 }
 #endif
