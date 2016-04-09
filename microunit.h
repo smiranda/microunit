@@ -1,5 +1,6 @@
 /**
 * @file microunit.h
+* @version 0.1
 * @author Sebastiao Salvador de Miranda (ssm)
 * @brief Tiny library for cpp unit testing. Should work on any c++11 compiler.
 *
