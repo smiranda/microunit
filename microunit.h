@@ -247,19 +247,19 @@ public:
       << MICROUNIT_SEPARATOR << std::endl
       << MICROUNIT_SEPARATOR << std::endl;
 
+    TERMINAL_GOOD << "Passed " << sucesses.size()
+      << " test cases:";
+    for (const auto& success_t : sucesses) {
+      TERMINAL_GOOD << success_t;
+    }
+    std::cout << MICROUNIT_SEPARATOR << std::endl;
+
     // Output result summary
     if (failures.empty()) {
       TERMINAL_GOOD << "All tests passed";
       std::cout << MICROUNIT_SEPARATOR << std::endl;
       return true;
     } else {
-      TERMINAL_GOOD << "Passed " << sucesses.size()
-        << " test cases:";
-      for (const auto& success_t : sucesses) {
-        TERMINAL_GOOD << success_t;
-      }
-      std::cout << MICROUNIT_SEPARATOR << std::endl;
-
       TERMINAL_BAD << "Failed " << failures.size()
         << " test cases:";
       for (const auto& failure : failures) {
