@@ -111,7 +111,7 @@ void SetTerminalColor(int color_code) {
   CONSOLE_SCREEN_BUFFER_INFO buffer_info;
   GetConsoleScreenBufferInfo(handler, &buffer_info);
   SetConsoleTextAttribute(handler, ((buffer_info.wAttributes & 0xFFF0) |
-                                    (WORD)color_code));
+    (WORD)color_code));
 #else
   std::cout << ColorCodeToANSI(color_code);
 #endif
@@ -224,7 +224,7 @@ public:
   * @returns True if all tests pass, false otherwise.
   */
   static bool Run() {
-    std::vector<std::string> failures;
+    std::vector<std::string> failures, sucesses;
 
     // Iterate all registered unit tests
     for (auto& unit : Instance().unitfunction_map_) {
@@ -240,6 +240,7 @@ public:
         failures.push_back(unit.first);
       } else {
         TERMINAL_GOOD << "Passed test";
+        sucesses.push_back(unit.first);
       }
     }
     std::cout
@@ -252,6 +253,13 @@ public:
       std::cout << MICROUNIT_SEPARATOR << std::endl;
       return true;
     } else {
+      TERMINAL_GOOD << "Passed " << sucesses.size()
+        << " test cases:";
+      for (const auto& success_t : sucesses) {
+        TERMINAL_GOOD << success_t;
+      }
+      std::cout << MICROUNIT_SEPARATOR << std::endl;
+
       TERMINAL_BAD << "Failed " << failures.size()
         << " test cases:";
       for (const auto& failure : failures) {
@@ -329,7 +337,7 @@ private:
 #define UNIT(FUNCTION)                                                         \
 void FUNCTION(microunit::UnitFunctionResult*);                                 \
 REGISTER_UNIT(FUNCTION);                                                       \
-void FUNCTION(microunit::UnitFunctionResult *__microunit_testresult)            
+void FUNCTION(microunit::UnitFunctionResult *__microunit_testresult)
 
 /**
 * @brief Pass the test and return from the test case.
@@ -359,7 +367,7 @@ FAIL();                                                                        \
 }
 
 /**
-* @brief Check a particular test condition. If the condition holds, fail the 
+* @brief Check a particular test condition. If the condition holds, fail the
 *        test and return.
 */
 #define ASSERT_FALSE(condition) if((condition)) {                              \
