@@ -25,7 +25,7 @@
 *  }
 * @endcode
 *
-* @copyright Copyright (c) 2016, Sebastiao Salvador de Miranda.
+* @copyright Copyright (c) 2016-2017, Sebastiao Salvador de Miranda.
 *            All rights reserved. See licence below.
 *
 * Redistribution and use in source and binary forms, with or without
