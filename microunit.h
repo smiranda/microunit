@@ -94,8 +94,8 @@ const static int COLORCODE_YELLOW{ 14 };
 std::string ColorCodeToANSI(const int color_code) {
   switch (color_code) {
   case COLORCODE_GREY: return "\033[22;37m";
-  case COLORCODE_GREEN: return "\033[01;31m";
-  case COLORCODE_RED: return "\033[01;32m";
+  case COLORCODE_GREEN: return "\033[01;32m";
+  case COLORCODE_RED: return "\033[01;31m";
   case COLORCODE_YELLOW: return "\033[01;33m";
   default: return "";
   }
