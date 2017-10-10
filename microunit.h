@@ -226,6 +226,10 @@ public:
   static bool Run() {
     std::vector<std::string> failures, sucesses;
 
+    TERMINAL_INFO
+      << "Will run " << Instance().unitfunction_map_.size() 
+      << " test cases";
+
     // Iterate all registered unit tests
     for (auto& unit : Instance().unitfunction_map_) {
       std::cout << MICROUNIT_SEPARATOR << std::endl;
