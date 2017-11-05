@@ -91,7 +91,7 @@ const static int COLORCODE_YELLOW{ 14 };
 * @brief Helper class to convert from color codes to ansi escape codes
 *        Used to print color in non-win32 systems.
 */
-std::string ColorCodeToANSI(const int color_code) {
+inline std::string ColorCodeToANSI(const int color_code) {
   switch (color_code) {
   case COLORCODE_GREY: return "\033[22;37m";
   case COLORCODE_GREEN: return "\033[01;32m";
@@ -105,7 +105,7 @@ std::string ColorCodeToANSI(const int color_code) {
 * @brief Helper function to change the current terminal color.
 * @param [in] color_code Input color code.
 */
-void SetTerminalColor(int color_code) {
+inline void SetTerminalColor(int color_code) {
 #if defined(_WIN32)
   HANDLE handler = GetStdHandle(STD_OUTPUT_HANDLE);
   CONSOLE_SCREEN_BUFFER_INFO buffer_info;
